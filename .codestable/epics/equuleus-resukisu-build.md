@@ -16,7 +16,7 @@ work: ../work/epic-equuleus-resukisu-build.md
 ## 非目标与边界
 - 本 Epic 不安装 Zygisk Next、LSPosed 或其他模块，不发布 GitHub Release。
 - 构建成功不等于允许刷机。刷写前必须核实当前系统、boot 分区布局、备份匹配性、安装路径和恢复步骤，并由用户明确通过刷写 checkpoint。
-- 不暂存或提交此目录中现有 ROM、boot 镜像、工具、ZIP、APK 等未跟踪材料；本地里程碑提交为 `3e59465`，远端发布提交为 `1b2782e902184639b2aade66a8433b4b806fea8a`，后续只允许精确暂存相关路径。
+- 不暂存或提交此目录中现有 ROM、boot 镜像、工具、ZIP、APK 等未跟踪材料；本地初始里程碑提交为 `3e59465`，远端初始发布提交为 `1b2782e902184639b2aade66a8433b4b806fea8a`，其后 adapter 修复提交为 `e684bca9f8e954aa61f2f845fb67ba558110565a`、artifact 修复提交为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`，当前目标分支 head 为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`；后续只允许精确暂存相关路径。
 
 ## 已核实事实
 - 设备上次识别为序列号 `c967753e`、产品 `equuleus`；新会话须重新检查设备、LineageOS 构建、bootloader 解锁状态和当前内核/Manager 状态。
@@ -29,7 +29,7 @@ work: ../work/epic-equuleus-resukisu-build.md
 - 固定根包来源校验结果：`clang-18`、`llvm-18`、`lld-18` 来自 `noble-updates/universe`；`gcc-aarch64-linux-gnu`、`gcc-arm-linux-gnueabihf`、`bc`、`flex`、`make`、`patch` 来自 `noble/main`；`binutils-aarch64-linux-gnu`、`binutils-arm-linux-gnueabihf`、`binutils`、`zip` 来自 `noble-updates/main`；`ccache` 来自 `noble/universe`；`bison`、`libelf-dev`、`libssl-dev`、`unzip` 的固定版本在 `noble-security/main` 与 `noble-updates/main` 均存在。
 - 对 `clang-18`、`llvm-18`、`lld-18` 的来源冲突已直接复核原始 `Packages.xz`：三者的精确版本 `1:18.1.3-1ubuntu1` 均只命中 `noble-updates/universe`，对应文件名分别为 `clang-18_18.1.3-1ubuntu1_amd64.deb`、`llvm-18_18.1.3-1ubuntu1_amd64.deb`、`lld-18_18.1.3-1ubuntu1_amd64.deb`；`noble/universe` 未命中这些精确版本。
 - Snapshot 索引级依赖闭包校验已通过：固定根包及其 `Pre-Depends`、`Depends`、`Recommends` 共 `248` 个包、`755` 条依赖边，无未解析项；来源计数为 `noble/main=73`、`noble-updates/main=52`、`noble-security/main=106`、`noble/universe=5`、`noble-updates/universe=10`、`noble-security/universe=2`，未使用其他 suite/component。该结果验证索引候选与版本约束，不替代获批后 ITEM-1 中的实际 `apt-get` 安装验证。
-- workflow 的发布目标已确定为 `https://github.com/napstablook666/xiaomi-sdm845-kernel-pro` 的 `codestable/equuleus-resukisu-build` 分支；`https://github.com/GuLingguang/xiaomi-sdm845-kernel-pro` 的 `lineage-22.2` 仅作只读参考基线。owner 已授权自动 push 和运行 Actions，实际构建结果仍须由 ITEM-2 记录。
+- workflow 的发布目标已确定为 `https://github.com/napstablook666/xiaomi-sdm845-kernel-pro` 的 `codestable/equuleus-resukisu-build` 分支；`https://github.com/GuLingguang/xiaomi-sdm845-kernel-pro` 的 `lineage-22.2` 仅作只读参考基线。owner 已授权自动 push 和运行 Actions；ITEM-2 已由 run `38404743286` 在远端提交 `cd5b314c1b601d7f142569edd21ea433dbc92cdb` 上完成并记录于 work 游标。
 - 回滚镜像 `D:\AI\小米8ud\boot-stock-lineage-20261006.img` 的已知 SHA-256 为 `08CE8935501BBDD5468BD40EDF4367C8F2A5BAD10BCF9229C74069638AABA4CF`。这只确认文件身份，尚未证明它匹配刷写时设备运行的系统构建、boot 分区或 slot，不得据此宣称回滚路径已验证。
 - 设备上次使用 Lineage Recovery 22.2；当前未验证它能安装 `ak3-equuleus.zip`。不得假设 Recovery 接受或正确执行 AnyKernel3 包。
 - 当前 ReSukiSU Manager 兼容 UAPI 5 的具体版本/官方产物尚未选定。新会话须固定官方来源、构建/版本和 SHA-256，并验证它能正常读取驱动状态及执行 Root 操作；已安装的其他 Manager 不能自动视为通过。
@@ -49,10 +49,10 @@ work: ../work/epic-equuleus-resukisu-build.md
 - Actions 成功，来源提交和 UAPI 5 正确，工具链版本可复核，最终 `.config` 与用户确认的唯一 hook 模式一致；镜像和 ZIP 内容、来源及 SHA-256 均经核对。
 - 已证明一种可执行的安装路径：Lineage Recovery 正确处理并安装 AK3，或匹配 ramdisk 的重打包镜像通过临时启动验证。不能仅凭 ZIP 非空或哈希存在认定可安装。
 - 若进行永久刷写，DEC-4 所列设备状态、分区和回滚前置条件全部有证据且用户已批准；否则只报告离线结果，不刷写。
-- 设备验收只有在匹配的官方 Manager 能使用 UAPI 5 驱动、Root 正常且基础硬件功能通过后才算完成。未运行 Actions、未刷机时，不得宣称构建或设备验收通过。
+- 设备验收只有在匹配的官方 Manager 能使用 UAPI 5 驱动、Root 正常且基础硬件功能通过后才算完成。Actions 构建已通过；未刷机时，不得宣称设备验收通过。
 
 ## 遗留风险
-- UAPI 5 ReSukiSU 提交在这台 Linux 4.9.337 设备上的完整编译与实机适配尚未验证。
-- Manual Hook 已获 owner 批准；workflow 已修正互斥断言、`Image.gz-dtb` 尾随 DTB 检查和构建日志路径，但实际 Actions 编译与产物验收仍待 ITEM-2。
+- UAPI 5 ReSukiSU 提交已在固定 Linux 4.9 kernel source tree 上完成交叉编译；目标设备上的实机启动、Root 和硬件适配尚未验证。
+- Manual Hook 已获 owner 批准；workflow 已修正互斥断言、`Image.gz-dtb` 尾随 DTB 检查和构建日志路径，首轮 Actions 编译因 adapter 兼容补丁失败，已在修复提交后由 run `38404743286` 完成编译与产物验收；ITEM-2 已通过。
 - Recovery 对 AK3 的支持、匹配当前系统的 boot ramdisk、临时启动能力和官方 UAPI 5 Manager 仍待新会话核实。
-- Snapshot 索引级依赖闭包已验证；首轮 workflow 已完成 APT 安装、固定 baseline/UAPI 5 checkout 和配置步骤，但 run `38393628663` 在编译阶段因 `fs/namei.c:3801:26: error: use of undeclared identifier 'tmp'` 失败。ITEM-2 未通过，产物未验收，本地回滚镜像仍未证明与未来刷写时系统匹配。
+- Snapshot 索引级依赖闭包已验证；首轮 workflow 已完成 APT 安装、固定 baseline/UAPI 5 checkout 和配置步骤，但 run `38393628663` 在编译阶段因 `fs/namei.c:3801:26: error: use of undeclared identifier 'tmp'` 失败。修复提交 `e684bca9f8e954aa61f2f845fb67ba558110565a` 及其 artifact 隐藏文件修复提交 `cd5b314c1b601d7f142569edd21ea433dbc92cdb` 后，run `38404743286` 完成构建和产物验收；ITEM-2 已通过，本地回滚镜像仍未证明与未来刷写时系统匹配。
