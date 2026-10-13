@@ -16,7 +16,7 @@ work: ../work/epic-equuleus-resukisu-build.md
 ## 非目标与边界
 - 本 Epic 不安装 Zygisk Next、LSPosed 或其他模块，不发布 GitHub Release。
 - 构建成功不等于允许刷机。刷写前必须核实当前系统、boot 分区布局、备份匹配性、安装路径和恢复步骤，并由用户明确通过刷写 checkpoint。
-- 不暂存或提交此目录中现有 ROM、boot 镜像、工具、ZIP、APK 等未跟踪材料；本地初始里程碑提交为 `3e59465`，远端初始发布提交为 `1b2782e902184639b2aade66a8433b4b806fea8a`，其后 adapter 修复提交为 `e684bca9f8e954aa61f2f845fb67ba558110565a`、artifact 修复提交为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`，当前目标分支 head 为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`；后续只允许精确暂存相关路径。
+- 不暂存或提交此目录中现有 ROM、boot 镜像、工具、ZIP、APK 等未跟踪材料；本地初始里程碑提交为 `3e59465`，远端初始发布提交为 `1b2782e902184639b2aade66a8433b4b806fea8a`，其后 adapter 修复提交为 `e684bca9f8e954aa61f2f845fb67ba558110565a`、artifact 修复提交为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`，成功构建所用 head 为 `cd5b314c1b601d7f142569edd21ea433dbc92cdb`，当前目标分支 head 为 `c82b21d0e7e03ca31a78f92925f4bc84348187b3`；后续只允许精确暂存相关路径。
 
 ## 已核实事实
 - 设备上次识别为序列号 `c967753e`、产品 `equuleus`；新会话须重新检查设备、LineageOS 构建、bootloader 解锁状态和当前内核/Manager 状态。
