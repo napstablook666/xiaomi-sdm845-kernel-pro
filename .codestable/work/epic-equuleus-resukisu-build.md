@@ -3,8 +3,8 @@ epic: ../epics/equuleus-resukisu-build.md
 phase: executing
 approved_revision: 9F09236E15F8F5847104E486CCC53F0DF2B62092B31610F269175BEDD2330390
 current_item: ITEM-3
-next_action: 用户解锁设备后打开 BakaSU Manager，核验 UAPI 5 状态与 Root 授权，再做可重复的硬件交互检查；Recovery 安装未验证，永久刷写仍需 DEC-4 单独批准。
-blocked_by: recovery_install_unverified; manager_ui_locked; su_root_unverified; hardware_interactive_unverified; fingerprint_service_baseline_failure; permanent_flash_dec4
+next_action: 保持原 `/boot`；如需 Root 端到端验收，需提供可发起 `su` 请求的客户端，Recovery 安装仍未验证；永久刷写仍需 DEC-4 单独批准。
+blocked_by: recovery_install_unverified; su_root_unverified; hardware_interactive_unverified; fingerprint_service_baseline_failure; permanent_flash_dec4
 item_progression: automatic
 milestone_commit: authorized
 remote_publish: each-milestone
@@ -35,3 +35,5 @@ remote_publish: each-milestone
 - ITEM-3 设备验证：ADB 识别 `c967753e`，product/device 均为 `equuleus`；bootloader `unlocked: yes`、A-only、boot 分区 64 MiB，`ro.boot.verifiedbootstate=orange`。从实机只读备份原 `/dev/block/by-name/boot` 为 `boot-equuleus-device-preflash.img`，SHA-256 `ff25fb79e3021113d734892ed69073a391b94a28af29e23aca044cbf5bcc2184`。按原 Android boot header v1、原 ramdisk/DTB 重组 CI `Image.gz-dtb` 的临时镜像 `equuleus-boot-temporary.img`（SHA-256 `e8fcdc2776c557ca3474b14026fc59cf2b8e9bd0e8b2bc52ddf49c76e6f5c765`），`fastboot boot` 返回 `OKAY`；运行时 `uname` 为 `4.9.337-perf-equuleus-gb6ac784a9c3e-dirty`，配置确认 `CONFIG_KSU_MANUAL_HOOK=y` 且所有 `CONFIG_KSU_SUSFS*` 未启用。设备随后重启回原 `/boot`，boot SHA-256 仍为上述备份值，未执行 `flash`。
 - ITEM-3 UAPI/Manager：临时启动期间 `ksud 4.2.0-rc3-55-gf6cb7e70 (uapi: 5)`，`ksud boot-info` 返回 A-only、默认分区 `boot`；已安装本地 `com.resukisu.resukisu` BakaSU `v4.2.0-rc3` (versionCode `35226`) arm64 APK，但设备处于锁屏，未完成 Manager UI 交互。普通 shell 执行 `su -c id` 返回 `/system/bin/sh: su: inaccessible or not found`，Root 授权仍未验收。
 - ITEM-3 硬件基线：Wi-Fi 已启用、Bluetooth 为 ON、相机服务枚举前后摄、传感器服务可列出传感器；fingerprint HAL 在目标临时 kernel 和随后原 `/boot` 重启后的基线都持续 SIGSEGV，因此记录为现有用户态/硬件验收阻塞，未归因于本次 kernel。
+- ITEM-3 第二次临时启动：解锁后打开 BakaSU Manager，目标页未显示原系统的“需要更新内核”，读取到内核驱动 `v4.1.0-8770c7e3@ReSukiSU (30701/5)`、kernel `4.9.337-perf-equuleus-gb6ac784a9c3e-dirty`、Android `15` 和设备 `Xiaomi MI 8 Pro`；页面显示 `0 个超级用户、0 个模块`，说明 UAPI/驱动已被 Manager 读到，但没有可验收的 Root 客户端请求。`su -c id` 仍返回 `/system/bin/sh: su: inaccessible or not found`。
+- ITEM-3 目标 kernel 服务检查：Wi-Fi `enabled=true` 且状态 `connected`，Bluetooth `enabled: true` / `state: ON`，相机服务枚举 `6` 个设备，sensorservice 报告 `42` 个硬件传感器；fingerprint HAL 仍 SIGSEGV，与原 `/boot` 基线一致。检查完成后已 `adb reboot` 回到原 `/boot`，当前 `uname` 为 `4.9.337-perf-equuleus-gb6ac784a9c3`，`fastboot devices` 为空，未执行永久刷写。
