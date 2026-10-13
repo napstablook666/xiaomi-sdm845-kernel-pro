@@ -3,8 +3,8 @@ epic: ../epics/equuleus-resukisu-build.md
 phase: executing
 approved_revision: 9F09236E15F8F5847104E486CCC53F0DF2B62092B31610F269175BEDD2330390
 current_item: ITEM-3
-next_action: 设备连接后按 DEC-3 复核当前 product/slot/bootloader，实测 Lineage Recovery 安装或匹配 boot ramdisk 的 `fastboot boot` 临时启动，再验收 UAPI 5 Manager、Root 与硬件；永久刷写前仍需 DEC-4。
-blocked_by: device_not_connected; recovery_install_unverified; temporary_boot_unverified; manager_root_hardware_unverified
+next_action: 用户解锁设备后打开 BakaSU Manager，核验 UAPI 5 状态与 Root 授权，再做可重复的硬件交互检查；Recovery 安装未验证，永久刷写仍需 DEC-4 单独批准。
+blocked_by: recovery_install_unverified; manager_ui_locked; su_root_unverified; hardware_interactive_unverified; fingerprint_service_baseline_failure; permanent_flash_dec4
 item_progression: automatic
 milestone_commit: authorized
 remote_publish: each-milestone
@@ -32,4 +32,6 @@ remote_publish: each-milestone
 - ITEM-2 已通过：run `38404743286`（head `cd5b314c1b601d7f142569edd21ea433dbc92cdb`）成功完成固定 Snapshot APT、UAPI 5 checkout、编译和 artifact 验收；`.config` 存在且为 `CONFIG_KSU=y`、`CONFIG_KSU_MANUAL_HOOK=y`，无任何 `CONFIG_KSU_SUSFS*` 为 `y`；`Image.gz-dtb` 与 ZIP 内镜像一致。metadata 记录 adapter SHA-256 `4751014f1298490c6aa22be5c6710fb2a13d81b37eccf3f06a0fefbebc25d405`、baseline build script SHA-256 `bbf526b2cdd04d74c10699aefe4d9e6541749ee5df988ff7bd59c0b673c188a7`、`patch=2.7.6-7build3` 和 Snapshot `20261013T000000Z`；artifact `build-metadata.txt` 末尾的 `sha256sum` 摘要加路径两行与下载的 Image/ZIP 实际计算结果逐一相等：镜像 SHA-256 `07c1bc0e519f8a38cc7bd47c80f9db377a88e7bb85703751f00ddb719adfa3fc`，ZIP SHA-256 `17eed4af2c2d3326587ec7bf21d9620037637229babf13586123a7951124e1d4`。未刷写。
 - ITEM-3 离线交付：run `38404743286` 的原始下载文件位于 `AnyKernel3/ak3-equuleus.zip`、`out/arch/arm64/boot/Image.gz-dtb` 和 `out/.config`；已复制到稳定目录 `D:/AI/小米8ud/equuleus-resukisu-run-38404743286/` 根部，并保留 `build-metadata.txt`、`build.log` 和 `artifact-manifest.sha256`。在该目录执行 `sha256sum -c artifact-manifest.sha256` 全部通过；GNU `sha256sum .config` 的标准记录为 `*` 二进制标记加文件名 `.config`（文本显示为 `*.config`），校验输出为 `.config: OK`；根部 ZIP SHA-256 为 `17eed4af2c2d3326587ec7bf21d9620037637229babf13586123a7951124e1d4`，未纳入普通代码提交。
 - 记录发布历史：目标分支曾从 `c82b21d0e7e03ca31a78f92925f4bc84348187b3` 快进至 `ef7f4b655e57b845de34a9f8b30468de1b8cfd01`；已核对该提交的父提交、Epic blob `7cbf9a59a5cb182bd3836f5fa1e907acf6432a2d`、work blob `79257a39edc4bce498d73dae43b6a781d538f95f`、workflow blob `fd02b39fcba83a450bae23e261105a1355609603` 和 adapter blob `9029ea1b45c87996a96889353e82cba4c279719c`。
-- ITEM-3 离线包审查：`anykernel.sh` 声明设备 `equuleus`、`do.devicecheck=1`、`is_slot_device=0` 并写入 `/boot`；`adb devices -l` 与 `fastboot devices` 当前均无设备，尚未证明 Lineage Recovery 可安装、`fastboot boot` 可临时启动、UAPI 5 Manager/Root 或硬件功能，未刷写。
+- ITEM-3 设备验证：ADB 识别 `c967753e`，product/device 均为 `equuleus`；bootloader `unlocked: yes`、A-only、boot 分区 64 MiB，`ro.boot.verifiedbootstate=orange`。从实机只读备份原 `/dev/block/by-name/boot` 为 `boot-equuleus-device-preflash.img`，SHA-256 `ff25fb79e3021113d734892ed69073a391b94a28af29e23aca044cbf5bcc2184`。按原 Android boot header v1、原 ramdisk/DTB 重组 CI `Image.gz-dtb` 的临时镜像 `equuleus-boot-temporary.img`（SHA-256 `e8fcdc2776c557ca3474b14026fc59cf2b8e9bd0e8b2bc52ddf49c76e6f5c765`），`fastboot boot` 返回 `OKAY`；运行时 `uname` 为 `4.9.337-perf-equuleus-gb6ac784a9c3e-dirty`，配置确认 `CONFIG_KSU_MANUAL_HOOK=y` 且所有 `CONFIG_KSU_SUSFS*` 未启用。设备随后重启回原 `/boot`，boot SHA-256 仍为上述备份值，未执行 `flash`。
+- ITEM-3 UAPI/Manager：临时启动期间 `ksud 4.2.0-rc3-55-gf6cb7e70 (uapi: 5)`，`ksud boot-info` 返回 A-only、默认分区 `boot`；已安装本地 `com.resukisu.resukisu` BakaSU `v4.2.0-rc3` (versionCode `35226`) arm64 APK，但设备处于锁屏，未完成 Manager UI 交互。普通 shell 执行 `su -c id` 返回 `/system/bin/sh: su: inaccessible or not found`，Root 授权仍未验收。
+- ITEM-3 硬件基线：Wi-Fi 已启用、Bluetooth 为 ON、相机服务枚举前后摄、传感器服务可列出传感器；fingerprint HAL 在目标临时 kernel 和随后原 `/boot` 重启后的基线都持续 SIGSEGV，因此记录为现有用户态/硬件验收阻塞，未归因于本次 kernel。
