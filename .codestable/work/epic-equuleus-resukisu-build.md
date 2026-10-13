@@ -3,8 +3,8 @@ epic: ../epics/equuleus-resukisu-build.md
 phase: executing
 approved_revision: 9F09236E15F8F5847104E486CCC53F0DF2B62092B31610F269175BEDD2330390
 current_item: ITEM-3
-next_action: DEC-4 明确批准后将已验收镜像写入 `/boot`，重启复验 Manager Root 与回滚路径；Recovery 安装仍未验证，第三方 App 首次 `su` 授权仍需在 Manager 内确认。
-blocked_by: recovery_install_unverified; third_party_root_client_unverified; hardware_interactive_unverified; fingerprint_service_baseline_failure; permanent_flash_dec4
+next_action: 设备已永久运行目标 kernel；BakaSU Manager Root Service 已验收，具体 App 按请求在 Manager 内授权；Recovery 安装与完整交互硬件验收仍未完成。
+blocked_by: recovery_install_unverified; hardware_interactive_unverified; fingerprint_service_baseline_failure
 item_progression: automatic
 milestone_commit: authorized
 remote_publish: each-milestone
@@ -38,3 +38,4 @@ remote_publish: each-milestone
 - ITEM-3 第二次临时启动：解锁后打开 BakaSU Manager，目标页未显示原系统的“需要更新内核”，读取到内核驱动 `v4.1.0-8770c7e3@ReSukiSU (30701/5)`、kernel `4.9.337-perf-equuleus-gb6ac784a9c3e-dirty`、Android `15` 和设备 `Xiaomi MI 8 Pro`；页面显示 `0 个超级用户、0 个模块`，说明 UAPI/驱动已被 Manager 读到，但没有可验收的 Root 客户端请求。`su -c id` 仍返回 `/system/bin/sh: su: inaccessible or not found`。
 - ITEM-3 目标 kernel 服务检查：Wi-Fi `enabled=true` 且状态 `connected`，Bluetooth `enabled: true` / `state: ON`，相机服务枚举 `6` 个设备，sensorservice 报告 `42` 个硬件传感器；fingerprint HAL 仍 SIGSEGV，与原 `/boot` 基线一致。检查完成后已 `adb reboot` 回到原 `/boot`，当前 `uname` 为 `4.9.337-perf-equuleus-gb6ac784a9c3`，`fastboot devices` 为空，未执行永久刷写。
 - ITEM-3 Root 通道验证：目标临时 kernel 下 `ksud debug info` 返回 version `30701`、full version `v4.1.0-8770c7e3@ReSukiSU`、UAPI `5`、built-in runtime；`ksud feature get/check su_compat` 返回值 `1`、`enabled`、`supported`。重启 BakaSU Manager 后其内置 `libksud.so debug su` root service 多次成功，kernel log 记录 `allow root for: 10206`、`ksu fd installed`，Manager 可完成 root service 初始化。普通 ADB shell UID `2000` 未在 allowlist，因此直接 `adb shell su -c id` 返回 `su: inaccessible or not found`；这不等于 Manager/被授权 App 的 Root 失败。
+- ITEM-3 DEC-4 永久写入：只读校验确认设备 `product:equuleus`、`unlocked:yes`、`secure:yes`、A-only，写入前设备 `/boot` SHA-256 与原备份 `ff25fb79e3021113d734892ed69073a391b94a28af29e23aca044cbf5bcc2184` 一致；执行 `fastboot flash boot equuleus-boot-temporary.img` 成功，随后 `fastboot reboot`。重启后设备 `/boot` SHA-256 为目标 `e8fcdc2776c557ca3474b14026fc59cf2b8e9bd0e8b2bc52ddf49c76e6f5c765`，`uname` 为 `4.9.337-perf-equuleus-gb6ac784a9c3e-dirty`，Manager Root Service 继续记录 `allow root for: 10206` / `ksu fd installed`；当前已不在 Fastboot，未写入 Recovery 或其他分区。
