@@ -194,6 +194,7 @@ jobs:
         with:
           name: equuleus-resukisu-uapi5-${{ github.run_id }}
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 14
           path: |
             AnyKernel3/ak3-equuleus.zip
