@@ -41,6 +41,14 @@ fi
 
 read -r -a diagnostic_dtb_names <<< "$DIAGNOSTIC_DTB_ORDER"
 test "${#diagnostic_dtb_names[@]}" -eq 18
+# This legacy Kbuild prepends arch/arm64/boot/dts/ to each configured name.
+# Keep the bare-name order for metadata while supplying qcom/<name> to Kbuild.
+diagnostic_dtb_kconfig_order="$(printf 'qcom/%s ' "${diagnostic_dtb_names[@]}")"
+diagnostic_dtb_kconfig_order="${diagnostic_dtb_kconfig_order% }"
+
+test "$(wc -w <<< "$diagnostic_dtb_kconfig_order")" -eq 18
+
+test "$(grep -o 'qcom/' <<< "$diagnostic_dtb_kconfig_order" | wc -l)" -eq 18
 
 baseline_build_script_sha256="$(sha256sum build_for_equuleus.sh | awk '{print $1}')"
 cp "$KSU_CONFIG" "$KSU_CONFIG_PATH"
@@ -50,7 +58,7 @@ if [[ "$DIAGNOSTIC_MODE" == 1 ]]; then
 CONFIG_KSU=y
 CONFIG_KSU_MANUAL_HOOK=y
 # CONFIG_KSU_SUSFS is not set
-CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES="$DIAGNOSTIC_DTB_ORDER"
+CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES="$diagnostic_dtb_kconfig_order"
 EOF
   cat "$diagnostic_config_fragment" >> "$KSU_CONFIG_PATH"
   rm -f "$diagnostic_config_fragment"
@@ -144,7 +152,7 @@ if grep -Eq '^CONFIG_KSU_SUSFS(_[A-Za-z0-9_]+)?=y$' out/.config; then
   exit 1
 fi
 if [[ "$DIAGNOSTIC_MODE" == 1 ]]; then
-  grep -Fqx "CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES=\"$DIAGNOSTIC_DTB_ORDER\"" out/.config
+  grep -Fqx "CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES=\"$diagnostic_dtb_kconfig_order\"" out/.config
 fi
 
 test -s out/arch/arm64/boot/Image.gz-dtb
@@ -162,6 +170,7 @@ if [[ -n "${GITHUB_ENV:-}" ]]; then
     printf 'DIAGNOSTIC_MODE=%s\n' "$DIAGNOSTIC_MODE"
     if [[ "$DIAGNOSTIC_MODE" == 1 ]]; then
       printf 'DIAGNOSTIC_DTB_ORDER=%s\n' "$DIAGNOSTIC_DTB_ORDER"
+      printf 'DIAGNOSTIC_DTB_KCONFIG_ORDER=%s\n' "$diagnostic_dtb_kconfig_order"
       printf 'DIAGNOSTIC_DTB_TAIL_SIZE=7596122\n'
       printf 'DIAGNOSTIC_PREINIT=preinit=0\n'
     fi
