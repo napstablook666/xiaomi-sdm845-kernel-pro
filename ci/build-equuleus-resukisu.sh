@@ -70,6 +70,7 @@ patch --fuzz=0 --forward --batch -p0 <<'PATCH'
 +scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${VIRTIO_CONFIG}"
 +scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${KSU_CONFIG_PATH}"
 +grep -qx 'CONFIG_KSU=y' "${OUT_DIR}/.config"
++make O="${OUT_DIR}" ARCH=arm64 prepare scripts
 +grep -qx 'CONFIG_KSU_MANUAL_HOOK=y' "${OUT_DIR}/.config"
 +if grep -Eq '^CONFIG_KSU_SUSFS(_[A-Za-z0-9_]+)?=y$' "${OUT_DIR}/.config"; then
 +	echo 'The SUSFS family must be disabled for the approved Manual Hook build.' >&2
@@ -86,6 +87,7 @@ PATCH
 test "$(grep -c '^struct file \*do_filp_open' fs/namei.c)" -eq 1
 grep -A8 -F 'struct file *do_filp_open' fs/namei.c | grep -Fqx $'\tstruct filename *tmp = pathname;'
 grep -Fqx 'scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${KSU_CONFIG_PATH}"' build_for_equuleus.sh
+grep -Fqx 'make O="${OUT_DIR}" ARCH=arm64 prepare scripts' build_for_equuleus.sh
 grep -Fqx 'make -j"${KBUILD_JOBS:-4}" -Orecurse O="${OUT_DIR}" ARCH=arm64 \' build_for_equuleus.sh
 grep -Fqx $'\t\tzip -rFS9 "ak3-equuleus.zip" . -x .git README.md "ak3-*.zip"' build_for_equuleus.sh
 
