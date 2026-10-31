@@ -72,7 +72,7 @@ patch --fuzz=0 --forward --batch -p0 <<'PATCH'
 +grep -qx 'CONFIG_KSU=y' "${OUT_DIR}/.config"
 +make -f scripts/Makefile.asm-generic srctree=. SRCARCH=arm64 src=asm obj="${OUT_DIR}/arch/arm64/include/generated/asm"
 +make -f scripts/Makefile.asm-generic srctree=. SRCARCH=arm64 src=uapi/asm obj="${OUT_DIR}/arch/arm64/include/generated/uapi/asm"
-+make O="${OUT_DIR}" ARCH=arm64 CC="${CC}" CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" prepare scripts
++make O="${OUT_DIR}" ARCH=arm64 CC="${CC}" CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" LLVM_IAS="${LLVM_IAS}" prepare scripts
 +grep -qx 'CONFIG_KSU_MANUAL_HOOK=y' "${OUT_DIR}/.config"
 +if grep -Eq '^CONFIG_KSU_SUSFS(_[A-Za-z0-9_]+)?=y$' "${OUT_DIR}/.config"; then
 +	echo 'The SUSFS family must be disabled for the approved Manual Hook build.' >&2
@@ -91,7 +91,7 @@ grep -A8 -F 'struct file *do_filp_open' fs/namei.c | grep -Fqx $'\tstruct filena
 grep -Fqx 'scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${KSU_CONFIG_PATH}"' build_for_equuleus.sh
 grep -Fqx 'make -f scripts/Makefile.asm-generic srctree=. SRCARCH=arm64 src=asm obj="${OUT_DIR}/arch/arm64/include/generated/asm"' build_for_equuleus.sh
 grep -Fqx 'make -f scripts/Makefile.asm-generic srctree=. SRCARCH=arm64 src=uapi/asm obj="${OUT_DIR}/arch/arm64/include/generated/uapi/asm"' build_for_equuleus.sh
-grep -Fqx 'make O="${OUT_DIR}" ARCH=arm64 CC="${CC}" CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" prepare scripts' build_for_equuleus.sh
+grep -Fqx 'make O="${OUT_DIR}" ARCH=arm64 CC="${CC}" CROSS_COMPILE="${CROSS_COMPILE}" CROSS_COMPILE_ARM32="${CROSS_COMPILE_ARM32}" CROSS_COMPILE_COMPAT="${CROSS_COMPILE_COMPAT}" LLVM_IAS="${LLVM_IAS}" prepare scripts' build_for_equuleus.sh
 grep -Fqx 'make -j"${KBUILD_JOBS:-4}" -Orecurse O="${OUT_DIR}" ARCH=arm64 \' build_for_equuleus.sh
 grep -Fqx $'\t\tzip -rFS9 "ak3-equuleus.zip" . -x .git README.md "ak3-*.zip"' build_for_equuleus.sh
 
