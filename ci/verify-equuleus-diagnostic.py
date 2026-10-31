@@ -3,6 +3,10 @@
 
 The optional boot backup is read only. Its command line is transformed in
 memory to model AnyKernel3's patch_cmdline call; no boot image is repacked.
+
+DTB order is expressed with the real pinned Kbuild source stems. The older
+artifact descriptions used model labels such as ``sdm845-v1-cdp`` and
+``sdm845-v1-mtp``; those are not source filenames in this tree.
 """
 
 from __future__ import annotations
@@ -17,11 +21,24 @@ import zlib
 from pathlib import Path
 
 EXPECTED_DTB_ORDER = (
-    "sdm845-mtp", "sdm845-rumi", "sdm845-cdp", "equuleus-p1-v2.1",
-    "sdm845-qrd", "sdm845-4k-panel-qrd", "sdm845-v1-cdp", "equuleus-p0-v2",
-    "equuleus-mp-v2.1", "sdm845-4k-panel-cdp", "sdm845-v2-qrd", "sdm845-v2-mtp",
-    "equuleus-p1-v2", "equuleus-p0-v2.1", "equuleus-mp-v2", "sdm845-v2-rumi",
-    "sdm845-v1-mtp", "sdm845-sim",
+    "sdm845-v2-mtp",
+    "sdm845-rumi",
+    "sdm845-v2-cdp",
+    "equuleus-p1-v2.1",
+    "sdm845-qrd",
+    "sdm845-4k-panel-qrd",
+    "sdm845-cdp",
+    "equuleus-p0-v2",
+    "equuleus-mp-v2.1",
+    "sdm845-4k-panel-cdp",
+    "sdm845-4k-panel-mtp",
+    "sdm845-v2-qrd",
+    "equuleus-p1-v2",
+    "equuleus-p0-v2.1",
+    "equuleus-mp-v2",
+    "sdm845-v2-rumi",
+    "sdm845-mtp",
+    "sdm845-sim",
 )
 EXPECTED_DTB_TAIL_SIZE = 7_596_122
 PREINIT_KEY = "preinit"
@@ -82,12 +99,18 @@ def parse_dtb_tail(tail: bytes) -> list[bytes]:
 
 
 def source_dtbs(dtb_dir: Path) -> dict[str, bytes]:
-    """Find generated DTBs recursively, including out/.../dts/qcom."""
+    """Read generated DTBs by their actual relative Kbuild source stem."""
     result = {}
     for path in sorted(dtb_dir.rglob("*.dtb")):
-        if path.stem in result:
-            raise VerificationError(f"duplicate DTB source name: {path.stem}")
-        result[path.stem] = path.read_bytes()
+        relative_name = path.relative_to(dtb_dir).as_posix()
+        if "/" in relative_name:
+            raise VerificationError(
+                f"DTB source directory contains nested artifact: {relative_name}"
+            )
+        name = path.stem
+        if name in result:
+            raise VerificationError(f"duplicate DTB source name: {name}")
+        result[name] = path.read_bytes()
     if not result:
         raise VerificationError(f"no .dtb files found below {dtb_dir}")
     return result
@@ -118,10 +141,13 @@ def verify_dtbs(image: bytes, dtb_dir: Path) -> tuple[int, str, str, str]:
         raise VerificationError(f"found {len(blobs)} DTBs, expected 18")
 
     source = source_dtbs(dtb_dir)
-    if set(source) != set(EXPECTED_DTB_ORDER):
-        missing = sorted(set(EXPECTED_DTB_ORDER) - set(source))
-        extra = sorted(set(source) - set(EXPECTED_DTB_ORDER))
-        raise VerificationError(f"source DTB set mismatch: missing={missing}, extra={extra}")
+    expected_names = set(EXPECTED_DTB_ORDER)
+    if set(source) != expected_names:
+        missing = sorted(expected_names - set(source))
+        extra = sorted(set(source) - expected_names)
+        raise VerificationError(
+            f"generated DTB source set mismatch: missing={missing}, extra={extra}"
+        )
 
     source_by_hash = source_dtbs_by_hash(source)
     actual_order = []
@@ -130,7 +156,9 @@ def verify_dtbs(image: bytes, dtb_dir: Path) -> tuple[int, str, str, str]:
         digest = sha256(blob)
         name = source_by_hash.get(digest)
         if name is None:
-            raise VerificationError(f"DTB {index} does not match any source .dtb")
+            raise VerificationError(
+                f"DTB {index} does not match any generated source .dtb by SHA-256"
+            )
         actual_order.append(name)
         hashes.append(f"{name}.dtb={digest}")
 
@@ -212,13 +240,7 @@ def read_boot_cmdline(backup: bytes) -> tuple[str, int]:
 
 
 def patch_preinit_cmdline(command_line: str) -> str:
-    """Model ak3-core.sh's grep/sed matching for the fixed key ``preinit``.
-
-    AnyKernel3 checks for the key as an unanchored substring. If found, it
-    replaces the first matching suffix inside the containing token; otherwise
-    it appends the replacement token. This mirrors the helper for the literal
-    diagnostic key without running shell tools or repacking a boot image.
-    """
+    """Model ak3-core.sh's grep/sed matching for the fixed key ``preinit``."""
     tokens = command_line.split()
     for index, token in enumerate(tokens):
         match_start = token.find(PREINIT_KEY)
@@ -244,7 +266,10 @@ def assert_cmdline_preserved(original: str, transformed: str) -> None:
     expected_token = expected_token[: expected_token.find(PREINIT_KEY)] + PREINIT_REPLACEMENT
     if len(after) != len(before) or after[match_index] != expected_token:
         raise VerificationError("preinit model changed the matching token incorrectly")
-    if after[:match_index] != before[:match_index] or after[match_index + 1 :] != before[match_index + 1 :]:
+    if (
+        after[:match_index] != before[:match_index]
+        or after[match_index + 1 :] != before[match_index + 1 :]
+    ):
         raise VerificationError("preinit model changed a non-preinit command-line token")
 
 
@@ -305,7 +330,8 @@ def synthetic_boot_image(command_line: str, extra_command_line: str = "") -> byt
     extra_encoded = extra_command_line.encode("ascii")
     image[ANDROID_CMDLINE_OFFSET : ANDROID_CMDLINE_OFFSET + len(encoded)] = encoded
     image[
-        ANDROID_EXTRA_CMDLINE_OFFSET : ANDROID_EXTRA_CMDLINE_OFFSET + len(extra_encoded)
+        ANDROID_EXTRA_CMDLINE_OFFSET :
+        ANDROID_EXTRA_CMDLINE_OFFSET + len(extra_encoded)
     ] = extra_encoded
     return bytes(image)
 

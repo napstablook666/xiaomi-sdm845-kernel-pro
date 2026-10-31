@@ -6,7 +6,9 @@ set -euo pipefail
 
 KSU_CONFIG_PATH="${KSU_CONFIG_PATH:-arch/arm64/configs/vendor/xiaomi/equuleus-resukisu.config}"
 DIAGNOSTIC_MODE="${DIAGNOSTIC_MODE:-0}"
-DIAGNOSTIC_DTB_ORDER='sdm845-mtp sdm845-rumi sdm845-cdp equuleus-p1-v2.1 sdm845-qrd sdm845-4k-panel-qrd sdm845-v1-cdp equuleus-p0-v2 equuleus-mp-v2.1 sdm845-4k-panel-cdp sdm845-v2-qrd sdm845-v2-mtp equuleus-p1-v2 equuleus-p0-v2.1 equuleus-mp-v2 sdm845-v2-rumi sdm845-v1-mtp sdm845-sim'
+# These are real qcom/*.dts stems from the pinned Makefile. The order matches
+# the known-good UAPI 5 Image.gz-dtb tail, not the DT model descriptions.
+DIAGNOSTIC_DTB_ORDER='sdm845-v2-mtp sdm845-rumi sdm845-v2-cdp equuleus-p1-v2.1 sdm845-qrd sdm845-4k-panel-qrd sdm845-cdp equuleus-p0-v2 equuleus-mp-v2.1 sdm845-4k-panel-cdp sdm845-4k-panel-mtp sdm845-v2-qrd equuleus-p1-v2 equuleus-p0-v2.1 equuleus-mp-v2 sdm845-v2-rumi sdm845-mtp sdm845-sim'
 
 case "$DIAGNOSTIC_MODE" in
   0|1) ;;
@@ -41,13 +43,15 @@ fi
 
 read -r -a diagnostic_dtb_names <<< "$DIAGNOSTIC_DTB_ORDER"
 test "${#diagnostic_dtb_names[@]}" -eq 18
-# This legacy Kbuild prepends arch/arm64/boot/dts/ to each configured name.
-# Keep the bare-name order for metadata while supplying qcom/<name> to Kbuild.
+for diagnostic_dtb_name in "${diagnostic_dtb_names[@]}"; do
+  test -f "arch/arm64/boot/dts/qcom/${diagnostic_dtb_name}.dts"
+done
+# CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES is relative to arch/arm64/boot,
+# so each entry must include the qcom/ subdirectory.
 diagnostic_dtb_kconfig_order="$(printf 'qcom/%s ' "${diagnostic_dtb_names[@]}")"
 diagnostic_dtb_kconfig_order="${diagnostic_dtb_kconfig_order% }"
 
 test "$(wc -w <<< "$diagnostic_dtb_kconfig_order")" -eq 18
-
 test "$(grep -o 'qcom/' <<< "$diagnostic_dtb_kconfig_order" | wc -l)" -eq 18
 
 baseline_build_script_sha256="$(sha256sum build_for_equuleus.sh | awk '{print $1}')"
