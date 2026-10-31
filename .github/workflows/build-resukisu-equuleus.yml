@@ -2,6 +2,15 @@ name: Build ReSukiSU for equuleus
 
 on:
   workflow_dispatch:
+    inputs:
+      diagnostic_profile:
+        description: "Build normal UAPI 6 or the offline-only diagnostic profile"
+        required: false
+        default: normal
+        type: choice
+        options:
+          - normal
+          - diagnostic
 
 permissions:
   contents: read
@@ -64,6 +73,7 @@ jobs:
           ld.lld --version
           aarch64-linux-gnu-gcc --version
           arm-linux-gnueabihf-gcc --version
+
       - name: Select ReSukiSU UAPI 6 source
         shell: bash
         run: |
@@ -72,6 +82,7 @@ jobs:
             48f0f2a55dfbbe591b7cebb78f373ffaf4304a07
           git -C KernelSU checkout --detach \
             48f0f2a55dfbbe591b7cebb78f373ffaf4304a07
+
       - name: Verify pinned sources
         shell: bash
         run: |
@@ -79,6 +90,7 @@ jobs:
           test "$(git -C workflow-ref rev-parse HEAD)" = \
             "${GITHUB_SHA}"
           test -f workflow-ref/ci/build-equuleus-resukisu.sh
+          test -f workflow-ref/ci/verify-equuleus-diagnostic.py
           reference_baseline_repo='https://github.com/GuLingguang/xiaomi-sdm845-kernel-pro'
           test "${GITHUB_REPOSITORY:-}" != "${reference_baseline_repo#https://github.com/}"
           test "$(git rev-parse HEAD)" = \
@@ -118,8 +130,13 @@ jobs:
           export LLVM=1
           export HOSTCC=clang
           export HOSTCXX=clang++
+          export DIAGNOSTIC_MODE=0
+          if [[ "${{ inputs.diagnostic_profile }}" == diagnostic ]]; then
+            export DIAGNOSTIC_MODE=1
+          fi
           export PATH="/usr/lib/llvm-18/bin:$PATH"
           bash workflow-ref/ci/build-equuleus-resukisu.sh
+
       - name: Verify and record build
         shell: bash
         run: |
@@ -127,7 +144,13 @@ jobs:
           export LLVM=1
           export HOSTCC=clang
           export HOSTCXX=clang++
+          export DIAGNOSTIC_MODE=0
+          if [[ "${{ inputs.diagnostic_profile }}" == diagnostic ]]; then
+            export DIAGNOSTIC_MODE=1
+          fi
           export PATH="/usr/lib/llvm-18/bin:$PATH"
+
+          : > diagnostic-verification.txt
 
           uapi=$(sed -n 's/.*KERNEL_SU_UAPI_VERSION = \([0-9][0-9]*\).*/\1/p' KernelSU/uapi/supercall.h)
           test "$uapi" = 6
@@ -135,9 +158,11 @@ jobs:
           raw_image=out/arch/arm64/boot/Image
           zipfile=AnyKernel3/ak3-equuleus.zip
           zip_image="$RUNNER_TEMP/zip-Image.gz-dtb"
+          boot_backup=boot-equuleus-preflash-20261031-174123.img
           test -s "$image"
           test -s "$raw_image"
           test -s "$zipfile"
+          unzip -t "$zipfile" >/dev/null
           unzip -Z1 "$zipfile" | grep -Fx 'Image.gz-dtb' >/dev/null
           unzip -p "$zipfile" Image.gz-dtb > "$zip_image"
           cmp -s "$image" "$zip_image"
@@ -147,17 +172,60 @@ jobs:
             echo 'The SUSFS family must be disabled for the approved Manual Hook build.' >&2
             exit 1
           fi
+          kernel_version="$(make -s O=out kernelversion)"
+          test "$kernel_version" = 4.9.337
+
+          if [[ "${DIAGNOSTIC_MODE:-0}" == 1 ]]; then
+            python3 workflow-ref/ci/verify-equuleus-diagnostic.py --self-check
+            verify_args=(
+              --image "$image"
+              --package "$zipfile"
+              --dtb-dir out/arch/arm64/boot/dts/qcom
+            )
+            if [[ -f "$boot_backup" ]]; then
+              verify_args+=(--boot-backup "$boot_backup")
+            fi
+            python3 workflow-ref/ci/verify-equuleus-diagnostic.py "${verify_args[@]}" \
+              | tee diagnostic-verification.txt
+            if [[ ! -f "$boot_backup" ]]; then
+              echo "boot_backup_status=missing:$boot_backup (local post-download verification required; CI checkout does not include retained backups)" \
+                | tee -a diagnostic-verification.txt
+            fi
+          else
+            echo 'boot_cmdline_model=deferred (normal profile; no diagnostic repack model)' \
+              | tee diagnostic-verification.txt
+          fi
 
           test -n "${BUILD_ADAPTER_SHA256:-}"
           test -n "${BASELINE_BUILD_SCRIPT_SHA256:-}"
           test -n "${BUILD_SOURCE_COMPAT_PATCH:-}"
           test "${KBUILD_JOBS:-}" = 4
           {
+            echo "github_run_id=${GITHUB_RUN_ID}"
             echo "build_adapter=workflow-ref/ci/build-equuleus-resukisu.sh"
             echo "build_adapter_sha256=$BUILD_ADAPTER_SHA256"
             echo "baseline_build_script_sha256=$BASELINE_BUILD_SCRIPT_SHA256"
             echo "build_source_compat_patch=$BUILD_SOURCE_COMPAT_PATCH"
             echo "kbuild_jobs=$KBUILD_JOBS"
+            echo "diagnostic_mode=${DIAGNOSTIC_MODE:-0}"
+            if [[ "${DIAGNOSTIC_MODE:-0}" == 1 ]]; then
+              echo "diagnostic_dtb_order=$DIAGNOSTIC_DTB_ORDER"
+              echo "diagnostic_dtb_tail_size=7596122"
+              echo "diagnostic_preinit_patch=preinit=0"
+            fi
+            cat diagnostic-verification.txt
+            for rollback in \
+              boot-equuleus-preflash-20261031-174123.img \
+              boot-equuleus-device-preflash.img \
+              boot-kernelsu-equuleus-20261006.img \
+              boot-stock-lineage-20261006.img; do
+              if [[ -f "$rollback" ]]; then
+                echo "rollback_artifact_status=${rollback}:present"
+                echo "rollback_artifact_sha256=${rollback}:$(sha256sum "$rollback" | awk '{print $1}')"
+              else
+                echo "rollback_artifact_status=${rollback}:missing"
+              fi
+            done
             echo "apt_snapshot_url=https://snapshot.ubuntu.com/ubuntu/20261013T000000Z/"
             echo "apt_suites=noble,noble-updates,noble-security"
             echo "apt_components=main,universe"
@@ -183,16 +251,27 @@ jobs:
             echo "resukisu_commit=$(git -C KernelSU rev-parse HEAD)"
             echo "resukisu_uapi=$uapi"
             echo "anykernel3_commit=$(git -C AnyKernel3 rev-parse HEAD)"
-            echo "kernel_version=$(make -s O=out kernelversion)"
+            echo "kernel_version=$kernel_version"
             echo "image=$image"
             sha256sum "$image" "$zipfile"
           } | tee build-metadata.txt
+
+
+      - name: Upload diagnostic DTB sources
+        if: success() && inputs.diagnostic_profile == 'diagnostic'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: equuleus-resukisu-uapi6-diagnostic-dtbs-${{ github.run_id }}
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+          path: out/arch/arm64/boot/dts/qcom/**/*.dtb
 
       - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: equuleus-resukisu-uapi6-${{ github.run_id }}
+          name: equuleus-resukisu-${{ inputs.diagnostic_profile == 'diagnostic' && 'uapi6-diagnostic' || 'uapi6' }}-${{ github.run_id }}
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
@@ -202,6 +281,7 @@ jobs:
             out/.config
             build.log
             build-metadata.txt
+            diagnostic-verification.txt
 
       - name: Upload failure diagnostics
         if: failure()
@@ -213,3 +293,4 @@ jobs:
           path: |
             build.log
             build-metadata.txt
+            diagnostic-verification.txt
