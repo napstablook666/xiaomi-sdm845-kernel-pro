@@ -65,7 +65,7 @@ patch --fuzz=0 --forward --batch -p0 <<'PATCH'
 +	set_nameidata(&nd, dfd, tmp);
 --- build_for_equuleus.sh
 +++ build_for_equuleus.sh
-@@ -56,1 +56,8 @@
+@@ -56,1 +56,9 @@
 -scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${VIRTIO_CONFIG}"
 +scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${VIRTIO_CONFIG}"
 +scripts/kconfig/merge_config.sh -O "${OUT_DIR}/" "${OUT_DIR}/.config" "${KSU_CONFIG_PATH}"
