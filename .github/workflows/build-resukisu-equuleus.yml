@@ -64,14 +64,14 @@ jobs:
           ld.lld --version
           aarch64-linux-gnu-gcc --version
           arm-linux-gnueabihf-gcc --version
-      - name: Select ReSukiSU UAPI 5 source
+      - name: Select ReSukiSU UAPI 6 source
         shell: bash
         run: |
           set -euo pipefail
           git -C KernelSU fetch --no-tags --depth=1 origin \
-            8770c7e324a22895703c4916b8a16520e0b81c79
+            48f0f2a55dfbbe591b7cebb78f373ffaf4304a07
           git -C KernelSU checkout --detach \
-            8770c7e324a22895703c4916b8a16520e0b81c79
+            48f0f2a55dfbbe591b7cebb78f373ffaf4304a07
       - name: Verify pinned sources
         shell: bash
         run: |
@@ -84,11 +84,11 @@ jobs:
           test "$(git rev-parse HEAD)" = \
             b6ac784a9c3ec331c0cc2de9c5b5e99a9c4c7ddb
           test "$(git -C KernelSU rev-parse HEAD)" = \
-            8770c7e324a22895703c4916b8a16520e0b81c79
+            48f0f2a55dfbbe591b7cebb78f373ffaf4304a07
           test "$(git -C AnyKernel3 rev-parse HEAD)" = \
             9eed8aea17dd92b97cf71368b74ac1174129e733
           uapi=$(sed -n 's/.*KERNEL_SU_UAPI_VERSION = \([0-9][0-9]*\).*/\1/p' KernelSU/uapi/supercall.h)
-          test "$uapi" = 5
+          test "$uapi" = 6
           test -f KernelSU/kernel/Kconfig
           grep -Fq 'ifneq ($(LLVM),)' Makefile
           grep -Fq 'HOSTCC       = clang' Makefile
@@ -130,7 +130,7 @@ jobs:
           export PATH="/usr/lib/llvm-18/bin:$PATH"
 
           uapi=$(sed -n 's/.*KERNEL_SU_UAPI_VERSION = \([0-9][0-9]*\).*/\1/p' KernelSU/uapi/supercall.h)
-          test "$uapi" = 5
+          test "$uapi" = 6
           image=out/arch/arm64/boot/Image.gz-dtb
           raw_image=out/arch/arm64/boot/Image
           zipfile=AnyKernel3/ak3-equuleus.zip
@@ -192,7 +192,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: equuleus-resukisu-uapi5-${{ github.run_id }}
+          name: equuleus-resukisu-uapi6-${{ github.run_id }}
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
